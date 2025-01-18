@@ -1,0 +1,6 @@
+llama-stack
+flake8
+accelerate
+transformers
+torch
+bitsandbytes
