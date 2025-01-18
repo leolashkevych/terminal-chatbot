@@ -5,3 +5,5 @@
 
 brew install huggingface-cli   
 huggingface-cli login --token $HF_TOKEN 
+
+# For compatible GPUs, install https://developer.nvidia.com/cuda-downloadshttps://developer.nvidia.com/cuda-downloads

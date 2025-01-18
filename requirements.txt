@@ -4,3 +4,6 @@ accelerate
 transformers
 torch
 bitsandbytes
+pytest
+pytest-cov
+pytest-mock
