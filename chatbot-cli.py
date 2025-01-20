@@ -6,22 +6,20 @@ Chatbot playground on Llama 3.2 abliterated model
 
 import logging
 from src.chatbot.model import Model
-from src.chatbot.generator import ChatbotGenerator
 from src.chatbot.utils import print_cuda_setup
 
 
 def chatbot(model_id):
     print_cuda_setup()
     model = Model(model_id)
-    generator = ChatbotGenerator(model=model.model, tokenizer=model.tokenizer)
     while True:
         try:
             user_input = input("\n> ")
             if user_input.lower() in ["quit", "exit"]:
                 break
 
-            output_text = generator.generate_response(user_input)
-            print("\nBot:", output_text, "\n")
+            output_text = model.generate_response(user_input)
+            print("\nUser:", output_text, "\n")
 
         except KeyboardInterrupt:
             logging.info("\nExiting chatbot...")
