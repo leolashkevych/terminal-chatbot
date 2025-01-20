@@ -1,17 +1,41 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from accelerate import Accelerator
 import torch
-from src.chatbot.utils import timeit
 import logging
+from accelerate import Accelerator
+from chatbot.utils import timeit
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from chatbot.constants import (
+    DEFAULT_STOP_SEQUENCE,
+    DEFAULT_PROMPT_SUFFIX,
+    DEFAULT_SYSTEM_PROMPT,
+)
 
 
 class Model:
     def __init__(self, model_id):
         self._model, self._tokenizer = self.initialize_model(model_id)
-        # set default system prompt
-        self._system_prompt = ""
-        # set default prompt suffix
-        self._prompt_suffix = "\nAssistant:"
+        self._prompt_suffix = DEFAULT_PROMPT_SUFFIX
+        self._system_prompt = DEFAULT_SYSTEM_PROMPT
+        self._stop_sequence = DEFAULT_STOP_SEQUENCE
+
+    @property
+    def model(self):
+        return self._model
+
+    @property
+    def tokenizer(self):
+        return self._tokenizer
+
+    @property
+    def prompt_suffix(self):
+        return self._prompt_suffix
+
+    @property
+    def system_prompt(self):
+        return self._system_prompt
+
+    @property
+    def stop_sequence(self):
+        return self._stop_sequence
 
     def initialize_model(self, model_id):
         accelerator = Accelerator()
@@ -45,22 +69,6 @@ class Model:
         logging.info(f"Model device: {next(model.parameters()).device}")
         return model, tokenizer
 
-    @property
-    def model(self):
-        return self._model
-
-    @property
-    def tokenizer(self):
-        return self._tokenizer
-    
-    @property
-    def prompt_suffix(self):
-        return self._prompt_suffix
-    
-    @property
-    def system_prompt(self):
-        return self._system_prompt
-
     @timeit
     def generate_response(
         self,
@@ -73,9 +81,12 @@ class Model:
         repetition_penalty=1.1,
     ):
         accelerator = Accelerator()
-        prompt += self.prompt_suffix 
+
         inputs = self.tokenizer(
-            prompt, return_tensors="pt", padding=True, return_attention_mask=True
+            self.construct_prompt(prompt),
+            return_tensors="pt",
+            padding=True,
+            return_attention_mask=True,
         )
 
         # Ensure inputs are moved to the same device as the model (mps or cuda)
@@ -94,6 +105,18 @@ class Model:
                 do_sample=True,
                 pad_token_id=self.tokenizer.pad_token_id,
                 tokenizer=self.tokenizer,
+                stop_strings=[self.stop_sequence],
             )
 
-        return self.tokenizer.decode(response[0], skip_special_tokens=True)
+        decoded_response = self.tokenizer.decode(response[0], skip_special_tokens=True)
+        logging.debug(f"Full LLM response: {decoded_response}")
+
+        return self.extract_response(decoded_response)
+
+    def construct_prompt(self, user_input):
+        return self.system_prompt + user_input + self.prompt_suffix
+
+    def extract_response(self, response):
+        return (
+            response.split(self.prompt_suffix)[-1].split(self.stop_sequence)[0].strip()
+        )

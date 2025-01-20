@@ -1,13 +1,36 @@
+import argparse
 import logging
 import time
 import torch
 
+from chatbot.constants import DEFAULT_MODEL_ID
 
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s  [%(levelname)s] [%(filename)s:%(lineno)s] %(message)s",
     )
+
+def set_logger_level(level):
+    logging.getLogger().setLevel(level)
+
+
+def pargs(*args, **kwargs):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-m",
+        "--model",
+        type=str,
+        default=DEFAULT_MODEL_ID,
+        help="HF Model ID to use for chatbot",
+    )
+    parser.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
+    return parser.parse_args(*args, **kwargs)
 
 
 def timeit(func):
