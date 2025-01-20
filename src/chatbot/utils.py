@@ -5,11 +5,13 @@ import torch
 
 from chatbot.constants import DEFAULT_MODEL_ID
 
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s  [%(levelname)s] [%(filename)s:%(lineno)s] %(message)s",
     )
+
 
 def set_logger_level(level):
     logging.getLogger().setLevel(level)
@@ -30,6 +32,19 @@ def pargs(*args, **kwargs):
         action="store_true",
         help="Enable debug logging",
     )
+    parser.add_argument(
+        "-a",
+        "--agents",
+        action="store_true",
+        help="Enable agentic capabilities using tools (such as adding a search engine connectivity)",
+    )
+    parser.add_argument(
+        "-t",
+        "--temp",
+        type=float,
+        default=0.3,
+        help="Model temperature (0.0 to 1.0)",
+    )
     return parser.parse_args(*args, **kwargs)
 
 
@@ -40,6 +55,7 @@ def timeit(func):
         end = time.time()
         logging.info(f"Function {func.__name__} took {end - start:.2f} seconds")
         return result
+
     return wrapper
 
 

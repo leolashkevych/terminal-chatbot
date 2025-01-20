@@ -15,6 +15,7 @@ setup(
         "pytest",
         "pytest-cov",
         "pytest-mock",
+        "duckduckgo-search"
     ],
     entry_points={
         "console_scripts": [

@@ -7,3 +7,4 @@ bitsandbytes
 pytest
 pytest-cov
 pytest-mock
+duckduckgo-search

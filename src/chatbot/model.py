@@ -1,21 +1,33 @@
 import torch
+import json
 import logging
 from accelerate import Accelerator
+from copy import deepcopy
 from chatbot.utils import timeit
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from chatbot.tools import Tools
 from chatbot.constants import (
     DEFAULT_STOP_SEQUENCE,
+    DEFAULT_PROMPT_PREFIX,
     DEFAULT_PROMPT_SUFFIX,
     DEFAULT_SYSTEM_PROMPT,
+    DEFAULT_SYSTEM_PROMPT_TOOLS,
+    TOOL_OUTPUT_PROCESS_PROMPT,
 )
 
 
 class Model:
-    def __init__(self, model_id):
+    def __init__(self, model_id, use_tools=True):
         self._model, self._tokenizer = self.initialize_model(model_id)
+        self._prompt_prefix = DEFAULT_PROMPT_PREFIX
         self._prompt_suffix = DEFAULT_PROMPT_SUFFIX
         self._system_prompt = DEFAULT_SYSTEM_PROMPT
         self._stop_sequence = DEFAULT_STOP_SEQUENCE
+        if use_tools:
+            self._tools = Tools()
+            self._system_prompt = DEFAULT_SYSTEM_PROMPT_TOOLS.format(
+                tools_description=self._tools.get_tools_description()
+            )
 
     @property
     def model(self):
@@ -75,15 +87,21 @@ class Model:
         prompt,
         max_length=512,
         max_sequences=1,
-        temp=0.7,
+        temp=0.3,
         top_p=0.9,
         top_k=50,
         repetition_penalty=1.1,
+        add_system_prompt=True,
     ):
         accelerator = Accelerator()
 
+        # preserve unprocessed user prompt
+        _prompt = deepcopy(prompt)
+        if add_system_prompt:
+            _prompt = self.prepare_prompt(_prompt)
+
         inputs = self.tokenizer(
-            self.construct_prompt(prompt),
+            _prompt,
             return_tensors="pt",
             padding=True,
             return_attention_mask=True,
@@ -96,7 +114,7 @@ class Model:
             response = self.model.generate(
                 inputs["input_ids"],
                 attention_mask=inputs["attention_mask"],
-                max_length=max_length,
+                max_new_tokens=max_length,
                 num_return_sequences=max_sequences,
                 temperature=temp,
                 top_p=top_p,
@@ -110,11 +128,59 @@ class Model:
 
         decoded_response = self.tokenizer.decode(response[0], skip_special_tokens=True)
         logging.debug(f"Full LLM response: {decoded_response}")
+        decoded_response = self.extract_response(decoded_response)
 
-        return self.extract_response(decoded_response)
+        if hasattr(self, '_tools'):
+            decoded_response = self.process_response(
+                response=decoded_response, prompt=prompt
+            )
 
-    def construct_prompt(self, user_input):
-        return self.system_prompt + user_input + self.prompt_suffix
+        return decoded_response
+
+    def process_response(self, response, prompt):
+        # Try to process response as JSON in case a tool was requested
+        try:
+            # try to get rid of anything non-json
+            r = response[response.find("{") : response.rfind("}") + 1]
+
+            tool_command = json.loads(r)
+            if (
+                isinstance(tool_command, dict)
+                and "tool" in tool_command
+                and "parameters" in tool_command
+            ):
+                result = self._tools.execute_tool(
+                    tool_command["tool"], **tool_command["parameters"]
+                )
+                return self.post_process_tool_out(
+                    original_prompt=prompt,
+                    original_response=response,
+                    tool_name=tool_command["tool"],
+                    tool_response=result,
+                )
+        except json.JSONDecodeError:
+            pass
+
+        return response
+
+    def post_process_tool_out(
+        self, original_prompt, original_response, tool_name, tool_response
+    ):
+        prompt = self.prepare_prompt(original_prompt)
+        prompt += original_response + "\n"
+        prompt += TOOL_OUTPUT_PROCESS_PROMPT.format(
+            tool_name=tool_name,
+            tool_output=tool_response,
+            original_query=original_prompt,
+        )
+        prompt += self._prompt_suffix
+        # do not add system prompt, since we are constructing one manually here
+        return self.generate_response(prompt, add_system_prompt=False)
+
+    def prepare_prompt(self, user_input):
+        return (
+            self.system_prompt + self._prompt_prefix + user_input + self.prompt_suffix
+        )
 
     def extract_response(self, response):
         return (
