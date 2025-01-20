@@ -5,8 +5,8 @@ Chatbot playground on Llama 3.2 abliterated model
 """
 
 import logging
-from src.chatbot.model import Model
-from src.chatbot.utils import print_cuda_setup
+from chatbot.model import Model
+from chatbot.utils import pargs, print_cuda_setup, set_logger_level
 
 
 def chatbot(model_id):
@@ -16,10 +16,10 @@ def chatbot(model_id):
         try:
             user_input = input("\n> ")
             if user_input.lower() in ["quit", "exit"]:
-                break
+                exit(0)
 
             output_text = model.generate_response(user_input)
-            print("\nUser:", output_text, "\n")
+            print("\nBot:", output_text, "\n")
 
         except KeyboardInterrupt:
             logging.info("\nExiting chatbot...")
@@ -28,8 +28,14 @@ def chatbot(model_id):
             logging.error(f"Error: {e}")
 
 
-if __name__ == "__main__":
-    # model_id = "meta-llama/Meta-Llama-3-8B-Instruct" # not spicy version
-    model_id = "mlabonne/Meta-Llama-3.1-8B-Instruct-abliterated"
+def main(*args, **kwargs):
+    args = pargs(*args, **kwargs)
+    if args.debug:
+        set_logger_level(logging.DEBUG)
+        logging.debug(f"Running with args: {args}")
 
-    chatbot(model_id=model_id)
+    chatbot(model_id=args.model)
+
+
+if __name__ == "__main__":
+    main()
