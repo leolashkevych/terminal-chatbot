@@ -81,6 +81,15 @@ class Model:
         logging.info(f"Model device: {next(model.parameters()).device}")
         return model, tokenizer
 
+    def get_tokenizer_info(self):
+        vocab = self.tokenizer.get_vocab()
+        added_vocab = self.tokenizer.get_added_vocab().keys()
+        vocab_files_names = self.tokenizer.vocab_files_names
+        logging.debug(f"Tokenizer files: {vocab_files_names}")
+        logging.debug(f"Tokenizer added vocab: {list(added_vocab)}")
+
+        return (vocab, added_vocab, vocab_files_names)
+
     @timeit
     def generate_response(
         self,
@@ -130,7 +139,7 @@ class Model:
         logging.debug(f"Full LLM response: {decoded_response}")
         decoded_response = self.extract_response(decoded_response)
 
-        if hasattr(self, '_tools'):
+        if hasattr(self, "_tools"):
             decoded_response = self.process_response(
                 response=decoded_response, prompt=prompt
             )

@@ -12,6 +12,7 @@ from chatbot.utils import pargs, print_cuda_setup, set_logger_level
 def chatbot(args):
     print_cuda_setup()
     model = Model(args.model, use_tools=args.agents)
+    model.get_tokenizer_info()
     while True:
         try:
             user_input = input("\n> ")
