@@ -3,7 +3,12 @@ import logging
 import time
 import torch
 
-from chatbot.constants import DEFAULT_MODEL_ID
+from chatbot.constants import (
+    DEFAULT_MODEL_ID,
+    DEFAULT_TEMP,
+    DEFAULT_TOP_P,
+    DEFAULT_TOP_K,
+)
 
 
 def setup_logging():
@@ -18,7 +23,9 @@ def set_logger_level(level):
 
 
 def pargs(*args, **kwargs):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     parser.add_argument(
         "-m",
         "--model",
@@ -42,10 +49,37 @@ def pargs(*args, **kwargs):
         "-t",
         "--temp",
         type=float,
-        default=0.3,
+        default=DEFAULT_TEMP,
         help="Model temperature (0.0 to 1.0)",
     )
-    return parser.parse_args(*args, **kwargs)
+    parser.add_argument(
+        "--top-p",
+        type=float,
+        default=DEFAULT_TOP_P,
+        help="Model top-p (0.0 to 1.0)",
+    )
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=DEFAULT_TOP_K,
+        help="Model top-k (0 to 100)",
+    )
+    args = parser.parse_args(*args, **kwargs)
+
+    # validate args
+    if args.temp < 0 or args.temp > 1:
+        parser.error("Temperature must be between 0.0 and 1.0")
+    if args.top_p < 0 or args.top_p > 1:
+        parser.error("Top-p must be between 0.0 and 1.0")
+    if args.top_k < 0 or args.top_k > 100:
+        parser.error("Top-k must be between 0 and 100")
+
+    return args
+
+
+def get_hf_token():
+    import os
+    return os.environ.get("HF_TOKEN", None)
 
 
 def timeit(func):

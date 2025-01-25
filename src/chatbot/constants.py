@@ -4,6 +4,9 @@ Model class defaults
 
 # model_id = "meta-llama/Meta-Llama-3-8B-Instruct" # not spicy version
 DEFAULT_MODEL_ID = "mlabonne/Meta-Llama-3.1-8B-Instruct-abliterated"
+DEFAULT_TEMP = 0.3
+DEFAULT_TOP_P = 0.9
+DEFAULT_TOP_K = 50
 
 DEFAULT_STOP_SEQUENCE = "REQUEST_COMPLETE"
 

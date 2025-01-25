@@ -18,7 +18,9 @@ def chatbot(args):
             if user_input.lower() in ["quit", "exit"]:
                 exit(0)
 
-            output_text = model.generate_response(user_input, temp=args.temp)
+            output_text = model.generate_response(
+                user_input, temp=args.temp, top_p=args.top_p, top_k=args.top_k
+            )
             print("\nBot:", output_text, "\n")
 
         except KeyboardInterrupt:
