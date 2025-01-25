@@ -1,4 +1,4 @@
-from src.chatbot.tools import Tools
+from chatbot.tools import Tools
 import pytest
 
 

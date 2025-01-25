@@ -1,5 +1,5 @@
 import pytest
-from src.chatbot.model import Model
+from chatbot.model import Model
 
 class TestChatbotIntegration:
     @pytest.fixture(scope="module")
